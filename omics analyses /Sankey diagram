@@ -1,0 +1,34 @@
+library(tidyverse)
+library(viridis)
+library(patchwork)
+library(networkD3)
+library(dplyr)
+data1 = read.table("fillter_MGS_BM_Med.txt",sep = "\t",check.names = F,
+                   stringsAsFactors = F,header = T)
+data1$ann = gsub(".*;f__","",data1$ann)
+data1$ann = gsub(";g__.*","",data1$ann)
+data1 = data1[data1$ann!="",]
+data1 = data1[,c(2,3,4,5,6)]
+data1 = data1[data1$p_value<0.1,]
+data2 = data1[,c(2,3,4,5)]
+colnames(data2) = colnames(data1[,c(1,2,4,5)])
+data1 = rbind(data2,data1[,c(1,2,4,5)])
+
+data1 = data1[data1$mediation_effects>0,]
+
+nodes <- data.frame(
+  name=c(as.character(data1$ann), 
+         as.character(data1$mediator)) %>% unique()
+)
+links = data1
+# With networkD3, connection must be provided using id, not using real name like in the links dataframe.. So we need to reformat it.
+links$IDsource <- match(links$ann, nodes$name)-1 
+links$IDtarget <- match(links$mediator, nodes$name)-1
+
+
+# Make the Network
+p <- sankeyNetwork(Links = links, Nodes = nodes,
+                   Source = "IDsource", Target = "IDtarget",
+                   Value = "mediation_effects", NodeID = "name", 
+                   sinksRight=FALSE)
+p
